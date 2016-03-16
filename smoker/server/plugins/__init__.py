@@ -104,6 +104,20 @@ class PluginManager(object):
         """
         Create Plugin objects
         """
+        _plugins_should_load = dict()
+        for plugin, options in self.conf_plugins.iteritems():
+            if options.has_key('Enabled'):
+                if options['Enabled']:
+                    _plugins_should_load[plugin] = options
+                else:
+                    lg.info("Plugin %s is disabled, skipping.." % plugin)
+            else:
+                _plugins_should_load[plugin] = options
+
+        if len(_plugins_should_load) == 0:
+            lg.error("No plugins to load!")
+            raise NoRunningPlugins("No plugins to load!")
+
         # Check if BasePlugin template is present
         # or raise exception
         try:
@@ -112,13 +126,11 @@ class PluginManager(object):
             lg.error("Required BasePlugin template is not configured!")
             raise BasePluginTemplateNotFound
 
-        for plugin, options in self.conf_plugins.iteritems():
-            if options.has_key('Enabled') and options['Enabled'] == False:
-                lg.info("Plugin %s is disabled, skipping.." % plugin)
-                continue
-
+        _loaded_plugins_count = 0
+        for plugin, options in _plugins_should_load.iteritems():
             try:
                 self.plugins[plugin] = self.load_plugin(plugin, options)
+                _loaded_plugins_count += 1
             except TemplateNotFound:
                 lg.error("Can't find configured template %s for plugin %s, plugin not loaded" % (options['Template'], plugin))
                 continue
@@ -134,9 +146,9 @@ class PluginManager(object):
                 continue
             lg.info("Loaded plugin %s" % plugin)
 
-        if len(self.plugins) == 0:
+        if _loaded_plugins_count == 0:
             lg.error("No plugins loaded!")
-            raise NoRunningPlugins("No plugins loaded!")
+            raise NoRunningPlugins("No plugins loaded!") # Or just a warning
 
     def load_plugin(self, plugin, options):
         """
