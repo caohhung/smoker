@@ -85,10 +85,10 @@ def get_ptree(process):
         process = psutil.Process(process)
 
     result = []
-    children = process.get_children()
+    children = process.children()
     if children:
         for child in children:
-            if child.get_children():
+            if child.children():
                 result.extend(get_ptree(child))
                 result.append(child)
             else:
@@ -107,11 +107,11 @@ def _proc_cleanup(pid):
         except psutil.NoSuchProcess:
             return
 
-        signal_ptree(process)
+        signal_ptree(process.pid)
         if process.is_running():
             # Still running - wait 1 second before sending SIGKILL
             time.sleep(1)
-            signal_ptree(process, 9)
+            signal_ptree(process.pid, 9)
 
 def _register_cleanup(pid):
     """
